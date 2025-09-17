@@ -24,7 +24,7 @@ def ocr_extract(image):
                 ys = [pt[1] for pt in bbox_points]
                 x_min, y_min = int(min(xs)), int(min(ys))
                 x_max, y_max = int(max(xs)), int(max(ys))
-                
+
                 results.append({
                     "text": text,
                     "conf": float(conf),
@@ -55,7 +55,7 @@ def extract_key_fields(results):
         "Treatment": "",
         "Occupation": ""
     }
-    
+
     for r in results:
         t = r["text"]
         if "姓名" in t or "Name" in t or "何大伟" in t:
@@ -72,5 +72,5 @@ def extract_key_fields(results):
             fields["Treatment"] = t
         if "Occupation" in t or "职业" in t:
             fields["Occupation"] = t
-    
+
     return fields
