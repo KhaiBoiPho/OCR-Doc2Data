@@ -5,7 +5,6 @@ import cv2
 
 @st.cache_resource
 def load_ocr_reader():
-    """Load EasyOCR - nhẹ và tốt cho chữ viết tay"""
     try:
         import easyocr
         reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
@@ -27,7 +26,6 @@ def ocr_extract(image):
 
         results = []
         for (bbox, text, conf) in results_raw:
-            # bbox là 4 điểm (x,y)
             xs = [pt[0] for pt in bbox]
             ys = [pt[1] for pt in bbox]
             x_min, y_min = int(min(xs)), int(min(ys))
