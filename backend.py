@@ -7,7 +7,7 @@ import cv2
 def load_ocr_reader():
     """Cache the OCR reader to avoid reloading on every run"""
     from paddleocr import PaddleOCR
-    return PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
+    return PaddleOCR(use_angle_cls=True, lang='ch')
 
 def ocr_extract(image):
     reader = load_ocr_reader()
