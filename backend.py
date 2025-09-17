@@ -1,31 +1,35 @@
-import easyocr
+import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
-import streamlit as st
 
 @st.cache_resource
 def load_ocr_reader():
     """Cache the OCR reader to avoid reloading on every run"""
-    return easyocr.Reader(['ch_sim', 'en'], gpu=False)
+    from paddleocr import PaddleOCR
+    return PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
 
 def ocr_extract(image):
     reader = load_ocr_reader()
     img_cv = np.array(image.convert("RGB"))
-    results_raw = reader.readtext(img_cv)
+    results_raw = reader.ocr(img_cv, cls=True)
 
     results = []
-    for (bbox, text, conf) in results_raw:
-        # bbox is 4 points (x,y)
-        xs = [pt[0] for pt in bbox]
-        ys = [pt[1] for pt in bbox]
-        x_min, y_min = int(min(xs)), int(min(ys))
-        x_max, y_max = int(max(xs)), int(max(ys))
-        results.append({
-            "text": text,
-            "conf": float(conf),
-            "bbox": (x_min, y_min, x_max - x_min, y_max - y_min)
-        })
+    if results_raw and results_raw[0]:  # PaddleOCR returns nested structure
+        for line in results_raw[0]:
+            if len(line) >= 2:
+                bbox_points, (text, conf) = line
+                # Convert bbox points to rectangle
+                xs = [pt[0] for pt in bbox_points]
+                ys = [pt[1] for pt in bbox_points]
+                x_min, y_min = int(min(xs)), int(min(ys))
+                x_max, y_max = int(max(xs)), int(max(ys))
+                
+                results.append({
+                    "text": text,
+                    "conf": float(conf),
+                    "bbox": (x_min, y_min, x_max - x_min, y_max - y_min)
+                })
     return results
 
 def draw_boxes(image, results):
@@ -33,7 +37,11 @@ def draw_boxes(image, results):
     for r in results:
         (x, y, w, h) = r["bbox"]
         cv2.rectangle(img_cv, (x, y), (x+w, y+h), (0,255,0), 2)
-        cv2.putText(img_cv, r["text"], (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+        try:
+            cv2.putText(img_cv, r["text"], (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+        except:
+            # Skip text that can't be rendered
+            pass
     return Image.fromarray(img_cv)
 
 def extract_key_fields(results):
