@@ -1,8 +1,6 @@
 streamlit
 pillow
 opencv-python-headless>=4.9.0.80
-torch>=2.3.0
-torchvision>=0.18.0
-easyocr>=1.7.1
+paddleocr>=2.7.3
 PyMuPDF
 numpy<2.0.0

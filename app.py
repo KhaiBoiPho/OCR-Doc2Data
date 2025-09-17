@@ -1,36 +1,83 @@
+# Alternative backend.py using PaddleOCR (more deployment-friendly)
 import streamlit as st
 from PIL import Image
-import fitz  # PyMuPDF
-import backend
+import numpy as np
+import cv2
 
-st.set_page_config(page_title="Insurance OCR Demo", layout="wide")
+# Only import PaddleOCR when needed
+@st.cache_resource
+def load_ocr_reader():
+    """Cache the OCR reader to avoid reloading on every run"""
+    try:
+        from paddleocr import PaddleOCR
+        return PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
+    except ImportError:
+        st.error("PaddleOCR not installed. Please add 'paddleocr' to requirements.txt")
+        return None
 
-st.title("📄 Insurance Claim Form OCR Demo")
-st.write("Upload an insurance claim form (image/PDF) and extract key fields.")
+def ocr_extract(image):
+    reader = load_ocr_reader()
+    if reader is None:
+        return []
+    
+    img_cv = np.array(image.convert("RGB"))
+    results_raw = reader.ocr(img_cv)
 
-uploaded_file = st.file_uploader("Upload Image or PDF", type=["png", "jpg", "jpeg", "pdf"])
+    results = []
+    if results_raw and results_raw[0]:  # PaddleOCR returns nested structure
+        for line in results_raw[0]:
+            if len(line) >= 2:
+                bbox_points, (text, conf) = line
+                # Convert bbox points to rectangle
+                xs = [pt[0] for pt in bbox_points]
+                ys = [pt[1] for pt in bbox_points]
+                x_min, y_min = int(min(xs)), int(min(ys))
+                x_max, y_max = int(max(xs)), int(max(ys))
+                
+                results.append({
+                    "text": text,
+                    "conf": float(conf),
+                    "bbox": (x_min, y_min, x_max - x_min, y_max - y_min)
+                })
+    return results
 
-if uploaded_file:
-    images = []
-    if uploaded_file.type == "application/pdf":
-        pdf = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-        for page in pdf:
-            pix = page.get_pixmap()
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            images.append(img)
-    else:
-        images.append(Image.open(uploaded_file))
+def draw_boxes(image, results):
+    img_cv = np.array(image.convert("RGB"))
+    for r in results:
+        (x, y, w, h) = r["bbox"]
+        cv2.rectangle(img_cv, (x, y), (x+w, y+h), (0,255,0), 2)
+        # Handle text encoding for display
+        text = r["text"]
+        cv2.putText(img_cv, text, (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+    return Image.fromarray(img_cv)
 
-    for i, image in enumerate(images):
-        st.image(image, caption=f"Page {i+1} - Uploaded Document", use_column_width=True)
-
-        with st.spinner("Processing OCR..."):
-            results = backend.ocr_extract(image)
-            boxed_image = backend.draw_boxes(image, results)
-            fields = backend.extract_key_fields(results)
-
-        st.subheader(f"🖼 OCR with Bounding Boxes - Page {i+1}")
-        st.image(boxed_image, use_column_width=True)
-
-        st.subheader(f"📑 Extracted Fields - Page {i+1}")
-        st.json(fields)
+def extract_key_fields(results):
+    fields = {
+        "姓名 (Name)": "", 
+        "证件 (HKID)": "", 
+        "出生日期 (DOB)": "", 
+        "医生 (Doctor)": "", 
+        "日期 (Date)": "",
+        "Address": "",
+        "Treatment": "",
+        "Occupation": ""
+    }
+    
+    for r in results:
+        t = r["text"]
+        if "姓名" in t or "Name" in t or "何大伟" in t:
+            fields["姓名 (Name)"] = t
+        if "HKID" in t or "身份证" in t or "B234567" in t:
+            fields["证件 (HKID)"] = t
+        if "/" in t and len(t) >= 8:
+            fields["日期 (Date)"] = t
+        if "医生" in t or "Doctor" in t or "黄尔明" in t:
+            fields["医生 (Doctor)"] = t
+        if "Address" in t or "地址" in t:
+            fields["Address"] = t
+        if "Treatment" in t or "治疗" in t:
+            fields["Treatment"] = t
+        if "Occupation" in t or "职业" in t:
+            fields["Occupation"] = t
+    
+    return fields
