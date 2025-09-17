@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
-from pdf2image import convert_from_bytes
 import backend
+import fitz  # PyMuPDF
 
 st.set_page_config(page_title="Insurance OCR Demo", layout="wide")
 
@@ -14,10 +14,15 @@ if uploaded_file:
     images = []
 
     if uploaded_file.type == "application/pdf":
-        # PDF -> list of PIL images (mỗi trang là 1 ảnh)
-        images = convert_from_bytes(uploaded_file.read())
+        # Convert PDF pages -> images
+        pdf_bytes = uploaded_file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        for page in doc:
+            pix = page.get_pixmap()  
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            images.append(img)
     else:
-        # Ảnh thường
+        # Regular image
         images = [Image.open(uploaded_file)]
 
     for page_num, image in enumerate(images, start=1):
