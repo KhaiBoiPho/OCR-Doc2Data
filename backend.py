@@ -1,89 +1,48 @@
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import numpy as np
+import cv2
 
 @st.cache_resource
 def load_ocr_reader():
     """Cache the OCR reader to avoid reloading on every run"""
-    try:
-        from paddleocr import PaddleOCR
-        return PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
-    except Exception as e:
-        st.error(f"Failed to load PaddleOCR: {e}")
-        return None
+    from paddleocr import PaddleOCR
+    return PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
 
 def ocr_extract(image):
     reader = load_ocr_reader()
-    if reader is None:
-        return []
-    
-    try:
-        img_array = np.array(image.convert("RGB"))
-        results_raw = reader.ocr(img_array, cls=True)  # Fixed: use 'ocr' method, not 'predict'
+    img_cv = np.array(image.convert("RGB"))
+    results_raw = reader.predict(img_cv)
 
-        results = []
-        if results_raw and results_raw[0]:  # PaddleOCR returns nested structure
-            for line in results_raw[0]:
-                if len(line) >= 2:
-                    bbox_points, (text, conf) = line
-                    # Convert bbox points to rectangle
-                    xs = [pt[0] for pt in bbox_points]
-                    ys = [pt[1] for pt in bbox_points]
-                    x_min, y_min = int(min(xs)), int(min(ys))
-                    x_max, y_max = int(max(xs)), int(max(ys))
-                    
-                    results.append({
-                        "text": text,
-                        "conf": float(conf),
-                        "bbox": (x_min, y_min, x_max - x_min, y_max - y_min)
-                    })
-        return results
-    except Exception as e:
-        st.error(f"OCR processing failed: {e}")
-        return []
+    results = []
+    if results_raw and results_raw[0]:  # PaddleOCR returns nested structure
+        for line in results_raw[0]:
+            if len(line) >= 2:
+                bbox_points, (text, conf) = line
+                # Convert bbox points to rectangle
+                xs = [pt[0] for pt in bbox_points]
+                ys = [pt[1] for pt in bbox_points]
+                x_min, y_min = int(min(xs)), int(min(ys))
+                x_max, y_max = int(max(xs)), int(max(ys))
+                
+                results.append({
+                    "text": text,
+                    "conf": float(conf),
+                    "bbox": (x_min, y_min, x_max - x_min, y_max - y_min)
+                })
+    return results
 
 def draw_boxes(image, results):
-    """Draw bounding boxes using PIL instead of cv2"""
-    img_copy = image.copy()
-    draw = ImageDraw.Draw(img_copy)
-    
-    # Try to load a font
-    try:
-        font = ImageFont.truetype("arial.ttf", 14)
-    except:
-        try:
-            font = ImageFont.load_default()
-        except:
-            font = None
-    
+    img_cv = np.array(image.convert("RGB"))
     for r in results:
-        x, y, w, h = r["bbox"]
-        
-        # Draw green rectangle (equivalent to cv2.rectangle)
-        draw.rectangle([x, y, x+w, y+h], outline="green", width=2)
-        
-        # Draw text (equivalent to cv2.putText)
+        (x, y, w, h) = r["bbox"]
+        cv2.rectangle(img_cv, (x, y), (x+w, y+h), (0,255,0), 2)
         try:
-            text_to_draw = r["text"]
-            # Limit text length to prevent UI issues
-            if len(text_to_draw) > 15:
-                text_to_draw = text_to_draw[:15] + "..."
-            
-            if font:
-                draw.text((x, max(0, y-20)), text_to_draw, fill="green", font=font)
-            else:
-                draw.text((x, max(0, y-20)), text_to_draw, fill="green")
-        except Exception as e:
-            # Fallback if text rendering fails
-            try:
-                if font:
-                    draw.text((x, max(0, y-20)), "Text", fill="green", font=font)
-                else:
-                    draw.text((x, max(0, y-20)), "Text", fill="green")
-            except:
-                pass  # Skip if even fallback fails
-    
-    return img_copy
+            cv2.putText(img_cv, r["text"], (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+        except:
+            # Skip text that can't be rendered
+            pass
+    return Image.fromarray(img_cv)
 
 def extract_key_fields(results):
     fields = {
