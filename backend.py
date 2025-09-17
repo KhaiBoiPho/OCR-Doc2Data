@@ -2,17 +2,21 @@ import easyocr
 from PIL import Image
 import numpy as np
 import cv2
+import streamlit as st
 
-# Khởi tạo OCR (tiếng Trung + Anh)
-reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
+@st.cache_resource
+def load_ocr_reader():
+    """Cache the OCR reader to avoid reloading on every run"""
+    return easyocr.Reader(['ch_sim', 'en'], gpu=False)
 
 def ocr_extract(image):
+    reader = load_ocr_reader()
     img_cv = np.array(image.convert("RGB"))
     results_raw = reader.readtext(img_cv)
 
     results = []
     for (bbox, text, conf) in results_raw:
-        # bbox là 4 điểm (x,y)
+        # bbox is 4 points (x,y)
         xs = [pt[0] for pt in bbox]
         ys = [pt[1] for pt in bbox]
         x_min, y_min = int(min(xs)), int(min(ys))
@@ -33,7 +37,17 @@ def draw_boxes(image, results):
     return Image.fromarray(img_cv)
 
 def extract_key_fields(results):
-    fields = {"姓名 (Name)": "", "证件 (HKID)": "", "出生日期 (DOB)": "", "医生 (Doctor)": "", "日期 (Date)": ""}
+    fields = {
+        "姓名 (Name)": "", 
+        "证件 (HKID)": "", 
+        "出生日期 (DOB)": "", 
+        "医生 (Doctor)": "", 
+        "日期 (Date)": "",
+        "Address": "",
+        "Treatment": "",
+        "Occupation": ""
+    }
+    
     for r in results:
         t = r["text"]
         if "姓名" in t or "Name" in t or "何大伟" in t:
@@ -44,10 +58,11 @@ def extract_key_fields(results):
             fields["日期 (Date)"] = t
         if "医生" in t or "Doctor" in t or "黄尔明" in t:
             fields["医生 (Doctor)"] = t
-        if "Adderess" in t:
+        if "Address" in t or "地址" in t:
             fields["Address"] = t
-        if "Treatment" in t:
+        if "Treatment" in t or "治疗" in t:
             fields["Treatment"] = t
-        if "Occupation" in t:
+        if "Occupation" in t or "职业" in t:
             fields["Occupation"] = t
+    
     return fields
