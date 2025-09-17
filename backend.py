@@ -12,7 +12,7 @@ def load_ocr_reader():
 def ocr_extract(image):
     reader = load_ocr_reader()
     img_cv = np.array(image.convert("RGB"))
-    results_raw = reader.ocr(img_cv, cls=True)
+    results_raw = reader.predict(img_cv)
 
     results = []
     if results_raw and results_raw[0]:  # PaddleOCR returns nested structure
