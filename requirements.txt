@@ -2,5 +2,5 @@ streamlit
 pillow
 opencv-python-headless
 paddleocr
-paddlepaddle==2.5.2
+paddlepaddle
 PyMuPDF
