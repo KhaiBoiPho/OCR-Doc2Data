@@ -1,6 +1,7 @@
 streamlit
 pillow
 numpy
-paddleocr
 opencv-python-headless
+torch
+transformers
 PyMuPDF
