@@ -2,4 +2,4 @@ streamlit
 pillow
 numpy
 paddleocr
-opencv-python
+opencv-python-headless
