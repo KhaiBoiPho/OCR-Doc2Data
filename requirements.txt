@@ -1,7 +1,8 @@
 streamlit
-numpy
-pandas
-easyocr
-opencv-python-headless
-torch
-torchvision
+pillow
+numpy<2.0.0
+easyocr==1.7.1
+opencv-python-headless==4.8.1.78
+torch==2.2.2
+torchvision==0.17.2
+PyMuPDF==1.23.14
