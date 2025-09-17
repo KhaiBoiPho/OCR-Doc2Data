@@ -1,6 +1,6 @@
-streamlit
-pillow
-opencv-python-headless
-paddleocr
-paddlepaddle
-PyMuPDF
+opencv-python>=4.7.0
+paddlepaddle>=2.5.0
+paddleocr>=2.6.0
+Pillow>=9.5.0
+numpy>=1.25.0
+streamlit>=1.26.0
