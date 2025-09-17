@@ -1,6 +1,5 @@
 streamlit
 pillow
-numpy<2.0.0
-paddleocr>=2.7.0
-opencv-python-headless>=4.9.0.80
-PyMuPDF
+numpy
+paddleocr
+opencv-python-headless
