@@ -50,7 +50,7 @@ insurance-ocr-demo/
 1. **Clone the repository** (or create files manually):
 ```bash
 git clone git@github.com:KhaiBoiPho/OCR-Doc2Data.git
-cd insurance-ocr-demo
+cd OCR-Doc2Data
 ```
 
 2. **Create virtual environment**:
