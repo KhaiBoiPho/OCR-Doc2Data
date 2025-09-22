@@ -49,7 +49,7 @@ insurance-ocr-demo/
 
 1. **Clone the repository** (or create files manually):
 ```bash
-git clone <your-repo-url>
+git clone git@github.com:KhaiBoiPho/OCR-Doc2Data.git
 cd insurance-ocr-demo
 ```
 
